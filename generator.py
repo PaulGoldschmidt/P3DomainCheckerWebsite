@@ -1,51 +1,58 @@
 import os
-import re
-import shutil
+import json
+from collections import defaultdict
 from datetime import datetime
+from jinja2 import Template
 
-# Read main HTML content and styles.css from static-src directory
+input_files_dir = "input-files"
+domain_lists_dir = os.path.join(input_files_dir, "domain-lists")
+log_dir = os.path.join(input_files_dir, "logs")
 static_src_dir = "static-src"
+output_dir = "output"
+
+# Read the main.html template
 with open(os.path.join(static_src_dir, "main.html"), "r") as file:
     main_html = file.read()
 
-with open(os.path.join(static_src_dir, "styles.css"), "r") as file:
-    styles_css = file.read()
+# Read the style.css content
+with open(os.path.join(static_src_dir, "style.css"), "r") as file:
+    style = file.read()
 
-# Read all text files from domain-lists directory
-domain_lists_dir = "domain-lists"
-domain_lists = {}
-for filename in os.listdir(domain_lists_dir):
-    if filename.endswith(".txt"):
-        with open(os.path.join(domain_lists_dir, filename), "r") as file:
-            domains = [line.strip() for line in file]
-            domain_lists[filename] = sorted(domains, key=lambda s: s.lower())
+template = Template(main_html)
 
-# Create output directory
-output_dir = "output"
-if not os.path.exists(output_dir):
-    os.mkdir(output_dir)
+list_options = []
+letter_counts = defaultdict(lambda: defaultdict(int))
+max_datetime = None
+max_log_date = ""
 
-# Write styles.css to output directory
-with open(os.path.join(output_dir, "styles.css"), "w") as file:
-    file.write(styles_css)
+# Find the latest log file
+for log_file in os.listdir(log_dir):
+    if log_file.endswith(".log"):
+        date_str = log_file[:15]
+        current_datetime = datetime.strptime(date_str, "%Y%m%d_%H%M%S")
 
-# Generate domains_html for each domain list
-domains_html = ""
-list_options = ""
-for filename, domains in domain_lists.items():
-    list_name = filename[:-4]  # Remove .txt extension
-    domains_html += f'<div class="domains" id="{list_name}" style="display:none;">\n'
-    domains_html += f'    <p>Domain count: {len(domains)}</p>\n'
-    if domains:
-        domains_html += '    <ul class="domain-list">\n'
-        for domain in domains:
-            domains_html += f'        <li class="domain">{domain}</li>\n'
-        domains_html += '    </ul>\n'
-    else:
-        domains_html += '    <p>Currently, there is no free domain on this list</p>\n'
-    domains_html += '</div>\n'
-    list_options += f'<option value="{list_name}">{list_name}</option>\n'
+        if max_datetime is None or current_datetime > max_datetime:
+            max_datetime = current_datetime
+            max_log_date = date_str
 
-# Create index.html with main_html, list_options, and domains_html
+# Read domain list files
+for file_id, domain_list_file in enumerate(sorted(os.listdir(domain_lists_dir))):
+    if domain_list_file.endswith(".txt"):
+        with open(os.path.join(domain_lists_dir, domain_list_file), 'r') as file:
+            domains = [line.strip() for line in file.readlines()]
+            domain_count = len(domains)
+
+            for domain in domains:
+                first_letter = domain[0].lower()
+                letter_counts[file_id][first_letter] += 1
+
+            list_options.append('<option value="{}" data-letter-counts=\'{}\'>{} ({})</option>'.format(file_id, json.dumps(letter_counts[file_id]), domain_list_file, domain_count))
+
+last_update_datetime = max_datetime.strftime("%Y-%m-%d %H:%M:%S")
+
+# Generate the HTML content
+content = template.render(style=style, list_options=list_options, domains_html=domains_html, last_update_datetime=last_update_datetime)
+
+# Write the output HTML file
 with open(os.path.join(output_dir, "index.html"), "w") as file:
-    file.write(main_html.format(list_options=list_options, domains_html=domains_html))
+    file.write(content)
