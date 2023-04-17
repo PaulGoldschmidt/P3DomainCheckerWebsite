@@ -1,0 +1,44 @@
+* {
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f0f0;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+#search {
+    width: 100%;
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+li.domain {
+    padding: 10px 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    background-color: #fff;
+}
+
+@media screen and (max-width: 600px) {
+    h1 {
+        font-size: 18px;
+    }
+}
